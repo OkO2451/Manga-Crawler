@@ -3,8 +3,11 @@ from bs4 import BeautifulSoup  # to filter through the requests
 # import time to sleep so that the website doesn't block us
 import time
 import random
+import io
 # Creating the folders
 import os
+# saving it as png and dealing with errors
+from PIL import Image, UnidentifiedImageError 
 
 # setting the url to be scraped
 home_url = "https://suryascans.com/"
@@ -41,14 +44,14 @@ for name, url in dict.items():
     url = suryaUrl(url,counter)
     respense = requests.get(url)
     # check if the response is valid
-    if respense.status_code == 200:
+    while respense.status_code == 200 :
         random_time = random.randint(1, 3)*0.1
         time.sleep(random_time)
         # parsing the html page
         soup = BeautifulSoup(respense.text, "html.parser")
         # getting the list of images
         list = soup.find_all("img")
-        print(name)
+        print(f"{name} chapter : {counter}")
         # creating a chapter folder
         if not os.path.exists(f"{name}/{counter}"):
             os.makedirs(f"{name}/{counter}")
@@ -64,28 +67,24 @@ for name, url in dict.items():
             random_time = random.randint(1, 3)*0.1
             time.sleep(1 + random_time)
             # saving the image
-            image = Image.open(io.BytesIO(image.content))
+            try:
+                # Download and save the image
+                response = requests.get(image_url)
+                image_data = response.content
+                image = Image.open(io.BytesIO(image_data))
 
-            # Convert the image to PNG format
-            png_image = image.convert("RGBA").convert("RGB")
+                # Convert the image to PNG format
+                png_image = image.convert("RGBA").convert("RGB")
 
-            # Save the image to a PNG file
-            png_file_name = os.path.splitext(image_name)[0] + ".png"
-            png_image.save(f"{name}/{counter}/{png_file_name}")
+                # Save the image to a PNG file
+                png_file_name = os.path.splitext(image_name)[0] + ".png"
+                png_image.save(f"{name}/{counter}/{png_file_name}")
 
-            with open(f"{name}/{counter}/{image_name}", "wb") as file:
-                file.write(image.content)
+            except UnidentifiedImageError:
+                print(f"Unable to identify image: {image_url}")
 
 
         # incrementing the counter
         counter += 1
-    else:
-        # if the page doesn't exist
-        if errors > 5:
-            errors = 0
-            counter = 1 # reset the counter since the manga is over
-            break
-        else:
-            # increment the errors
-            errors += 1
+    counter = 1
         
